@@ -1,0 +1,27 @@
+# build artifacts
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/lib/
+**/node_modules/
+
+# foundry deps are installed with `forge install`, not committed
+
+# secrets / local ops (never commit)
+.env
+*.env
+**/*.key
+**/*.pem
+
+# personal deploy/ops scripts (reference local paths + wallets)
+deploy-mainnet.ps1
+deploy-testnet.ps1
+launch-ticker.ps1
+MAINNET-CHECKLIST.md
+contracts/script/TestnetDeploy.s.sol
+contracts/script/LocalDeploy.s.sol
+
+# misc
+*.log
+.DS_Store
+Thumbs.db
