@@ -25,3 +25,7 @@ contracts/script/LocalDeploy.s.sol
 *.log
 .DS_Store
 Thumbs.db
+
+# brand asset export
+tick-logo.png
+web/logo-render.html
