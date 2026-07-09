@@ -78,6 +78,10 @@ main{ max-width:1120px; margin:0 auto; padding:8px 26px 90px; }
 .section-h{ display:flex; align-items:baseline; gap:12px; margin:6px 0 14px; flex-wrap:wrap; }
 .section-h h2{ margin:0; font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--ink); }
 .section-h .sub{ color:var(--faint); font-size:12.5px; }
+.section-h .grow{ flex:1; }
+.searchbar input{ font:inherit; font-size:12.5px; padding:7px 12px; border:1px solid var(--line2); border-radius:var(--r); background:var(--panel); color:var(--ink); width:240px; outline:none; transition:border-color .15s; }
+.searchbar input:focus{ border-color:var(--accent); }
+.searchbar input::placeholder{ color:var(--faint); }
 
 /* ---------- table ---------- */
 .card{ background:var(--panel); border:1px solid var(--line); border-radius:var(--r); overflow:hidden; }
@@ -132,6 +136,8 @@ td .floor{ color:var(--accent2); font-family:var(--mono); }
 .back-link:hover{ color:var(--ink); }
 .detail-head .av{ width:50px; height:50px; font-size:17px; border-radius:10px; }
 .detail-head .h2{ font-size:28px; font-weight:500; letter-spacing:-.02em; }
+.gami{ display:flex; align-items:center; gap:20px; padding:12px 16px; margin-bottom:14px; background:var(--panel2); border:1px solid var(--line); border-radius:var(--r); font-size:13px; flex-wrap:wrap; }
+.gami-rank{ font-weight:700; letter-spacing:-.01em; }
 .metrics{ display:grid; grid-template-columns:repeat(auto-fit,minmax(122px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:var(--r); overflow:hidden; margin-bottom:22px; }
 .metric{ background:var(--panel); padding:15px 16px; }
 .metric b{ display:block; font-family:var(--mono); font-size:18px; font-weight:500; letter-spacing:-.01em; }

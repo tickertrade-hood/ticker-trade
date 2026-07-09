@@ -47,7 +47,7 @@ const STAKING_ABI = [
   'function totalStaked() view returns (uint256)',
 ];
 
-const S = { route: 'board', id: null, side: 'buy', me: null, signer: null, board: [], demo: false, provider: null, loading: true };
+const S = { route: 'board', id: null, side: 'buy', me: null, signer: null, board: [], demo: false, provider: null, loading: true, q: '' };
 
 /* ---------------- providers ---------------- */
 function readProvider() {
@@ -154,11 +154,17 @@ function renderBoard(v) {
     </div>`;
   v.appendChild(hero);
 
-  v.appendChild(headBlock('The board', 'every row is a live on-chain vault — click any to trade'));
+  const sh = headBlock('The board', 'every row is a live on-chain vault — click any to trade');
+  sh.appendChild(el('span', 'grow'));
+  const sb = el('span', 'searchbar', `<input id="board-search" placeholder="Search ticker or trader…" spellcheck="false" value="${esc(S.q || '')}" />`);
+  sh.appendChild(sb);
+  v.appendChild(sh);
 
   const card = el('div', 'card');
   if (S.loading && !S.board.length) { card.innerHTML = skel(); v.appendChild(card); return; }
-  const rows = [...S.board].sort((a, b) => fmtU(b.vaultValue) - fmtU(a.vaultValue)).map(t => {
+  const q = (S.q || '').toLowerCase();
+  const filtered = [...S.board].filter(t => !q || t.symbol.toLowerCase().includes(q) || t.name.toLowerCase().includes(q) || t.trader.toLowerCase().includes(q));
+  const rows = filtered.sort((a, b) => fmtU(b.vaultValue) - fmtU(a.vaultValue)).map(t => {
     const prem = Number(t.premiumBps) / 100;
     const pv = Math.min(100, Math.abs(prem));
     const bd = badges(t).map(x => `<span class="badge ${x.c}" title="${x.title}">${x.t}</span>`).join('');
@@ -176,9 +182,21 @@ function renderBoard(v) {
   card.innerHTML = `<table><thead><tr>
       <th>Trader ticker</th><th>Price</th><th>Floor (NAV)</th>
       <th>Premium</th><th>Backing</th><th>Tier</th>
-    </tr></thead><tbody>${rows || emptyRow()}</tbody></table>`;
+    </tr></thead><tbody>${rows || `<tr><td colspan="6"><div class="empty">${q ? 'No match for "' + esc(S.q) + '"' : 'No tickers yet — be the first to <b>Launch yourself</b>.'}</div></td></tr>`}</tbody></table>`;
   v.appendChild(card);
   card.querySelectorAll('tr[data-id]').forEach(r => r.onclick = () => setRoute('detail', Number(r.dataset.id)));
+  // live filter without re-render (keeps input focus)
+  const si = $('#board-search');
+  if (si) si.oninput = () => {
+    S.q = si.value;
+    const qq = si.value.toLowerCase();
+    let shown = 0;
+    card.querySelectorAll('tr[data-id]').forEach(r => {
+      const t = S.board.find(x => x.id === Number(r.dataset.id));
+      const hit = !qq || t.symbol.toLowerCase().includes(qq) || t.name.toLowerCase().includes(qq) || t.trader.toLowerCase().includes(qq);
+      r.style.display = hit ? '' : 'none'; if (hit) shown++;
+    });
+  };
 }
 function tierBadge(t) { const x = tierOf(t); return `<span class="tier ${x.k}">${x.label}</span>`; }
 function emptyRow() { return `<tr><td colspan="6"><div class="empty">No tickers yet — be the first to <b>Launch yourself</b>.</div></td></tr>`; }
@@ -304,6 +322,15 @@ function renderDetail(v) {
     <div class="dim" style="font-size:13px;margin-top:2px">${esc(t.name)} · trader ${esc(short(t.trader))} · <span class="mono">Lv ${x.lvl}</span></div></div>
     <div style="margin-left:auto">${badges(t).map(b=>`<span class="badge ${b.c}" title="${b.title}">${b.t}</span>`).join('')}</div>`;
   v.appendChild(head);
+
+  // gamification strip: leaderboard rank + XP progress to next level
+  const ranked = [...S.board].map(z => ({ id: z.id, s: traderScore(z) })).sort((a, b) => b.s - a.s);
+  const rank = ranked.findIndex(r => r.id === t.id) + 1;
+  const gs = el('div', 'gami');
+  gs.innerHTML = `
+    <span class="gami-rank">🏆 Rank #${rank}<span class="dim"> / ${S.board.length}</span></span>
+    <span class="xp" style="flex:1;max-width:280px"><span class="lvl">Lv ${x.lvl}</span><span class="track"><i style="width:${(x.into*100).toFixed(0)}%"></i></span><span class="lvl mono">${(x.into*100).toFixed(0)}% to Lv ${x.lvl+1}</span></span>`;
+  v.appendChild(gs);
 
   const m = el('div', 'metrics');
   m.innerHTML = metric('Price', usd(fmtU(t.price)))
