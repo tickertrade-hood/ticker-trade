@@ -58,10 +58,12 @@ window.CFG_MAINNET = {
   explorer: 'https://robinhoodchain.blockscout.com',
   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
 
-  // ---- deploy outputs (fill in after broadcast; empty => DEMO mode) ----
-  hub: '',
-  lens: '',
-  registry: '',
+  // ---- deploy outputs — PRE-WIRED to the deterministic addresses the mainnet
+  //      deploy will produce (deployer 0x4800…A743, nonce 0). Live the instant
+  //      you broadcast Deploy.s.sol; shows DEMO until then. ----
+  hub: '0x5AA393716e28c850B86DB393C5131eE86b683415',
+  lens: '0xCb10D92eA672ba3ff6a8d14e153b142224fCffEA',
+  registry: '0xBe384C27E88072E5EA00EAa41B963E30cfBEb25B',
 
   // quote token
   usdg: '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168',
@@ -69,13 +71,14 @@ window.CFG_MAINNET = {
 
   slippageBps: 100, // 1%
 
-  deployBlock: 0, // set to the hub deploy block after mainnet deploy (chart/feed range)
+  deployBlock: 5605700, // chart/feed indexed from here (just before the deploy)
   // $TICK fee-sharing — paste the NOXA-launched token + the FeeStaking address
   tick: '', feeStaking: '',
 
   // vault-asset universe surfaced in the trader console (must match the
   // deployed AssetRegistry whitelist)
   assets: [
+    { sym: 'ETH',  name: 'Ether',      token: '0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73', poolFee: 500 },
     { sym: 'AAPL', name: 'Apple',      token: '0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9', poolFee: 3000 },
     { sym: 'TSLA', name: 'Tesla',      token: '0x322F0929c4625eD5bAd873c95208D54E1c003b2d', poolFee: 3000 },
     { sym: 'NVDA', name: 'Nvidia',     token: '0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC', poolFee: 3000 },
