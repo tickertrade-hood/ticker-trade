@@ -46,7 +46,7 @@ contract RhTickerHub {
     uint256 public constant YV0 = 1_000_000e18;
     uint256 public constant LAUNCH_FEE = 50e6;
     uint256 public constant MIN_SEED = 500e6;
-    uint256 public constant GRAD_VAULT = 250_000e6;
+    uint256 public constant GRAD_VAULT = 170_000e6; // graduation at $170k real backing
     uint256 public constant GRAD_AGE = 30 days;
     uint256 public constant SEED_LOCK = 30 days;
     uint256 public constant REDEEM_DELAY = 6 hours;
