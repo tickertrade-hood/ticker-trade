@@ -39,7 +39,7 @@ contract RhTickerHub {
 
     // ---------- params (USDG = 6 dec, ticker tokens = 18 dec) ----------
     uint256 public constant CURVE_FEE_BPS = 100;
-    uint256 public constant GRAD_FEE_BPS = 50;
+    // (graduation is a status badge only — the fee stays at CURVE_FEE_BPS)
     uint256 public constant FEE_PROTO_BPS = 7000;
     uint256 public constant VAULT_SPLIT_BPS = 8000;
     uint256 public constant XV0 = 30_000e6;
@@ -161,8 +161,11 @@ contract RhTickerHub {
         return t.xv * WAD / t.yv;
     }
 
-    function feeBps(uint256 id) public view returns (uint256) {
-        return tickers[id].graduated ? GRAD_FEE_BPS : CURVE_FEE_BPS;
+    /// @notice trading fee. Graduation is a STATUS BADGE ONLY — it does not change
+    ///         the fee, so protocol/creator revenue on large, graduated tickers is
+    ///         preserved. Always 1%.
+    function feeBps(uint256) public pure returns (uint256) {
+        return CURVE_FEE_BPS;
     }
 
     function quoteBuy(uint256 id, uint256 usdIn) public view returns (uint256 out, uint256 fee, bool navMint) {
