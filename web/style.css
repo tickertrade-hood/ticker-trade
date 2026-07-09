@@ -136,6 +136,14 @@ td .floor{ color:var(--accent2); font-family:var(--mono); }
 .back-link:hover{ color:var(--ink); }
 .detail-head .av{ width:50px; height:50px; font-size:17px; border-radius:10px; }
 .detail-head .h2{ font-size:28px; font-weight:500; letter-spacing:-.02em; }
+.feed-row{ display:flex; align-items:center; gap:10px; padding:11px 16px; border-bottom:1px solid var(--line2); font-size:13px; }
+.feed-row:last-child{ border-bottom:none; }
+.feed-k{ font-size:9px; font-weight:700; letter-spacing:.08em; padding:3px 7px; border-radius:4px; min-width:58px; text-align:center; }
+.feed-k.buy{ background:var(--accent-wash); color:var(--accent2); }
+.feed-k.sell{ background:color-mix(in srgb,var(--red) 12%,var(--panel)); color:var(--red); }
+.feed-k.trade{ background:color-mix(in srgb,var(--violet) 14%,var(--panel)); color:var(--violet); }
+.feed-row .faint{ margin-left:auto; }
+.feed-row .faint + .faint{ margin-left:8px; }
 .gami{ display:flex; align-items:center; gap:20px; padding:12px 16px; margin-bottom:14px; background:var(--panel2); border:1px solid var(--line); border-radius:var(--r); font-size:13px; flex-wrap:wrap; }
 .gami-rank{ font-weight:700; letter-spacing:-.01em; }
 .metrics{ display:grid; grid-template-columns:repeat(auto-fit,minmax(122px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:var(--r); overflow:hidden; margin-bottom:22px; }

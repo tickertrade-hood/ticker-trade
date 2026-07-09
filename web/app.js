@@ -46,6 +46,70 @@ const STAKING_ABI = [
   'function staked(address) view returns (uint256)',
   'function totalStaked() view returns (uint256)',
 ];
+// events for the chart + activity/trader-moves feed + your P&L
+const HUB_EV_ABI = [
+  'event Bought(uint256 indexed id, address indexed who, uint256 usdIn, uint256 tokensOut, bool navMint)',
+  'event Sold(uint256 indexed id, address indexed who, uint256 qty, uint256 proceeds)',
+];
+const VAULT_EV_ABI = [
+  'event Swapped(address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut, uint256 fairOut, bool forced)',
+];
+
+/// pull a ticker's on-chain trade history (buys/sells + the trader's swaps).
+async function fetchHistory(t) {
+  const from = CFG.deployBlock || 0;
+  const hub = new E.Contract(CFG.hub, HUB_EV_ABI, S.provider);
+  const vault = new E.Contract(t.vault, VAULT_EV_ABI, S.provider);
+  const [bought, sold, swaps] = await Promise.all([
+    hub.queryFilter(hub.filters.Bought(t.id), from).catch(() => []),
+    hub.queryFilter(hub.filters.Sold(t.id), from).catch(() => []),
+    vault.queryFilter(vault.filters.Swapped(), from).catch(() => []),
+  ]);
+  const ev = [];
+  for (const e of bought) {
+    const usd = fmtU(e.args.usdIn), qty = fmtU(e.args.tokensOut, 18);
+    ev.push({ b: e.blockNumber, kind: 'buy', who: e.args.who, usd, qty, price: qty > 0 ? usd / qty : 0 });
+  }
+  for (const e of sold) {
+    const usd = fmtU(e.args.proceeds), qty = fmtU(e.args.qty, 18);
+    ev.push({ b: e.blockNumber, kind: 'sell', who: e.args.who, usd, qty, price: qty > 0 ? usd / qty : 0 });
+  }
+  for (const e of swaps) {
+    ev.push({ b: e.blockNumber, kind: 'trade', tokenIn: e.args.tokenIn, tokenOut: e.args.tokenOut, amountIn: e.args.amountIn });
+  }
+  ev.sort((a, b) => a.b - b.b);
+  return ev;
+}
+
+function assetSym(addr) {
+  if (addr && addr.toLowerCase() === CFG.usdg.toLowerCase()) return 'USDG';
+  const a = (CFG.assets || []).find(x => x.token && x.token.toLowerCase() === (addr || '').toLowerCase());
+  return a ? a.sym : short(addr);
+}
+
+/// draw a price + floor line chart on a canvas from the trade history
+function drawChart(cv, ev, nav) {
+  const pts = ev.filter(e => e.kind !== 'trade' && e.price > 0);
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height, pad = 8;
+  ctx.clearRect(0, 0, W, H);
+  const css = getComputedStyle(document.documentElement);
+  const line = css.getPropertyValue('--accent2').trim() || '#2bbd6a';
+  const floorC = css.getPropertyValue('--dim').trim() || '#888';
+  if (pts.length < 2) { ctx.fillStyle = css.getPropertyValue('--faint'); ctx.font = '12px sans-serif'; ctx.fillText('not enough trades yet for a chart', pad, H / 2); return; }
+  const prices = pts.map(p => p.price).concat([nav]).filter(x => x > 0);
+  const min = Math.min(...prices), max = Math.max(...prices), rng = max - min || 1;
+  const x = i => pad + (W - 2 * pad) * i / (pts.length - 1);
+  const y = v => H - pad - (H - 2 * pad) * (v - min) / rng;
+  // floor line
+  ctx.strokeStyle = floorC; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad, y(nav)); ctx.lineTo(W - pad, y(nav)); ctx.stroke(); ctx.setLineDash([]);
+  // price line + fill
+  ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(x(i), y(p.price)) : ctx.moveTo(x(i), y(p.price)));
+  ctx.strokeStyle = line; ctx.lineWidth = 2; ctx.stroke();
+  ctx.lineTo(x(pts.length - 1), H - pad); ctx.lineTo(x(0), H - pad); ctx.closePath();
+  ctx.fillStyle = line + '18'; ctx.fill();
+}
 
 const S = { route: 'board', id: null, side: 'buy', me: null, signer: null, board: [], demo: false, provider: null, loading: true, q: '' };
 
@@ -353,6 +417,50 @@ function renderDetail(v) {
   grid.appendChild(left);
   grid.appendChild(tradePanel(t));
   v.appendChild(grid);
+
+  // live chart + activity/trader-moves + your P&L (from on-chain events)
+  if (live()) {
+    const sec = el('div');
+    sec.innerHTML = `
+      <div class="section-h" style="margin-top:26px"><h2>Price &amp; floor</h2><span class="sub">from real on-chain trades</span></div>
+      <div class="card" style="padding:14px"><canvas id="chart" width="1080" height="220" style="width:100%;height:220px;display:block"></canvas></div>
+      <div class="grid2" style="margin-top:20px">
+        <div><div class="section-h"><h2>Activity &amp; trader moves</h2></div><div class="card" id="feed"><div class="skel"><div class="skel-row"></div><div class="skel-row"></div></div></div></div>
+        <div><div class="section-h"><h2>Your position</h2></div><div class="panel" id="mypos"><div class="dim" style="font-size:13px">Connect a wallet to see your position &amp; P&amp;L.</div></div></div>
+      </div>`;
+    v.appendChild(sec);
+    fetchHistory(t).then(ev => populateDetailData(t, ev)).catch(e => { console.error(e); const f = $('#feed'); if (f) f.innerHTML = '<div class="empty">couldn\'t load activity</div>'; });
+  }
+}
+function populateDetailData(t, ev) {
+  const cv = $('#chart'); if (cv) drawChart(cv, ev, fmtU(t.nav));
+  const feed = $('#feed');
+  if (feed) {
+    const rows = [...ev].reverse().slice(0, 14).map(e => {
+      if (e.kind === 'trade') return `<div class="feed-row"><span class="feed-k trade">TRADER</span><span>${esc(assetSym(e.tokenIn))} <span class="faint">→</span> ${esc(assetSym(e.tokenOut))}</span></div>`;
+      return `<div class="feed-row"><span class="feed-k ${e.kind}">${e.kind === 'buy' ? 'BOUGHT' : 'SOLD'}</span><span class="mono ${e.kind === 'buy' ? 'up' : 'down'}">${usd(e.usd)}</span><span class="faint mono">@ ${usd(e.price)}</span><span class="faint">${esc(short(e.who))}</span></div>`;
+    }).join('');
+    feed.innerHTML = rows || `<div class="empty">No trades yet — be first.</div>`;
+  }
+  if (S.me) computePosition(t, ev);
+}
+async function computePosition(t, ev) {
+  const box = $('#mypos'); if (!box) return;
+  const mine = ev.filter(e => (e.kind === 'buy' || e.kind === 'sell') && e.who.toLowerCase() === S.me.toLowerCase());
+  let spent = 0, got = 0;
+  mine.forEach(e => e.kind === 'buy' ? spent += e.usd : got += e.usd);
+  try {
+    const tok = new E.Contract(t.token, ERC20_ABI, S.provider);
+    const bal = fmtU(await tok.balanceOf(S.me), 18);
+    const value = bal * fmtU(t.price), floorVal = bal * fmtU(t.nav);
+    const pnl = value + got - spent;
+    box.innerHTML = `<div class="quote">
+      <div class="row"><span class="dim">Your tokens</span><span class="mono">${bal.toFixed(3)} ${esc(t.symbol)}</span></div>
+      <div class="row"><span class="dim">Market value</span><span class="mono">${usd(value)}</span></div>
+      <div class="row"><span class="dim">Floor value</span><span class="mono up">${usd(floorVal)}</span></div>
+      <div class="row"><span class="dim">P&amp;L</span><span class="mono ${pnl >= 0 ? 'up' : 'down'}">${pnl >= 0 ? '+' : '−'}${usd(Math.abs(pnl))}</span></div>
+    </div>`;
+  } catch (e) { console.error(e); }
 }
 function metric(s, b, c) { return `<div class="metric"><b class="${c||''}">${b}</b><span>${s}</span></div>`; }
 

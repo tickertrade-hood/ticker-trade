@@ -39,6 +39,7 @@ window.CFG_TESTNET = {
   usdgDecimals: 6,
   slippageBps: 100,
   faucet: true,
+  deployBlock: 88500000, // events indexed from here (chart / feed)
   // $TICK fee-sharing (fill after DeployStaking): tick token + FeeStaking address
   tick: '', feeStaking: '',
   assets: [
@@ -68,6 +69,7 @@ window.CFG_MAINNET = {
 
   slippageBps: 100, // 1%
 
+  deployBlock: 0, // set to the hub deploy block after mainnet deploy (chart/feed range)
   // $TICK fee-sharing — paste the NOXA-launched token + the FeeStaking address
   tick: '', feeStaking: '',
 
